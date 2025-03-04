@@ -22,6 +22,10 @@ VSCodeProjectsRunner::VSCodeProjectsRunner(QObject *parent, const KPluginMetaDat
 #endif
 {
     Q_UNUSED(args)
+    if (!QStandardPaths::findExecutable(QStringLiteral("windsurf-next"))
+             .isEmpty()) {
+      projects << loadProjects(QStringLiteral("Windsurf - Next"));
+    }
     if (!QStandardPaths::findExecutable(QStringLiteral("windsurf")).isEmpty()) {
         projects << loadProjects(QStringLiteral("Windsurf"));
     }
@@ -86,14 +90,18 @@ KRunner::QueryMatch VSCodeProjectsRunner::createMatch(const QString &text, const
 void VSCodeProjectsRunner::run(const KRunner::RunnerContext &, const KRunner::QueryMatch &match)
 {
     QString executable = QStringLiteral("code");
-    if (!QStandardPaths::findExecutable(QStringLiteral("windsurf")).isEmpty()) {
-        executable = QStringLiteral("windsurf");
-    }
-    else if (!QStandardPaths::findExecutable(QStringLiteral("cursor")).isEmpty()) {
-        executable = QStringLiteral("cursor");
-    }
-    else if (!QStandardPaths::findExecutable(QStringLiteral("codium")).isEmpty()) {
-        executable = QStringLiteral("codium");
+    if (!QStandardPaths::findExecutable(QStringLiteral("windsurf-next"))
+             .isEmpty()) {
+      executable = QStringLiteral("windsurf-next");
+    } else if (!QStandardPaths::findExecutable(QStringLiteral("windsurf"))
+                    .isEmpty()) {
+      executable = QStringLiteral("windsurf");
+    } else if (!QStandardPaths::findExecutable(QStringLiteral("cursor"))
+                    .isEmpty()) {
+      executable = QStringLiteral("cursor");
+    } else if (!QStandardPaths::findExecutable(QStringLiteral("codium"))
+                    .isEmpty()) {
+      executable = QStringLiteral("codium");
     }
     QProcess::startDetached(executable, {match.data().toString()});
 }
