@@ -126,8 +126,50 @@ QList<VSCodeProject> VSCodeProjectsRunner::loadProjects(const QString &dirName)
                 const auto obj = item.toObject();
                 if (obj.value(QStringLiteral("enabled")).toBool()) {
                     --position;
-                    const QString projectPath = obj.value(QStringLiteral("rootPath")).toString().replace(QLatin1String("$home"), QDir::homePath());
-                    projects.append(VSCodeProject{position, obj.value(QStringLiteral("name")).toString(), projectPath});
+                    const QString projectPath =
+                        obj.value(QStringLiteral("rootPath"))
+                            .toString()
+                            .replace(QLatin1String("$home"), QDir::homePath());
+                    QDir git_dir(projectPath + QStringLiteral("/.git"));
+                    QFile git_file(projectPath + QStringLiteral("/.git"));
+                    if (!git_dir.exists() && !git_file.exists()) {
+                      projects.append(VSCodeProject{
+                          position,
+                          obj.value(QStringLiteral("name")).toString(),
+                          projectPath});
+                      continue;
+                    }
+
+                    QProcess process;
+                    process.setWorkingDirectory(projectPath);
+                    process.start(QStringLiteral("git"),
+                                  {QStringLiteral("worktree"),
+                                   QStringLiteral("list"),
+                                   QStringLiteral("--porcelain")});
+                    process.waitForFinished();
+                    const QString worktreeOutput =
+                        process.readAllStandardOutput();
+
+                    const QRegularExpression worktreeRegex(QStringLiteral(
+                        "worktree\\s+(.+)\\nHEAD\\s+[a-f0-9]+\\n(?:branch\\s+"
+                        "refs/heads/(.+)|detached)"));
+                    for (const QString &entry :
+                         worktreeOutput.split("\n\n", Qt::SkipEmptyParts)) {
+                      const auto match = worktreeRegex.match(entry);
+                      if (match.hasMatch()) {
+                        const QString worktreePath = match.captured(1);
+                        const QString branch = match.captured(2);
+                        if (QDir(worktreePath).exists()) {
+                          projects.append(VSCodeProject{
+                              position,
+                              QStringLiteral("%1 (%2)")
+                                  .arg(obj.value(QStringLiteral("name"))
+                                           .toString())
+                                  .arg(branch.isEmpty() ? "detached" : branch),
+                              worktreePath});
+                        }
+                      }
+                    }
                 }
             }
         }
