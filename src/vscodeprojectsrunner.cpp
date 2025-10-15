@@ -32,6 +32,10 @@ VSCodeProjectsRunner::VSCodeProjectsRunner(QObject *parent, const KPluginMetaDat
     if (!QStandardPaths::findExecutable(QStringLiteral("cursor")).isEmpty()) {
         projects << loadProjects(QStringLiteral("Cursor"));
     }
+    if (!QStandardPaths::findExecutable(QStringLiteral("code-insiders"))
+             .isEmpty()) {
+      projects << loadProjects(QStringLiteral("Code - Insiders"));
+    }
     if (!QStandardPaths::findExecutable(QStringLiteral("code")).isEmpty()) {
         projects << loadProjects(QStringLiteral("Code"));
         projects << loadProjects(QStringLiteral("Code - OSS"));
@@ -102,6 +106,9 @@ void VSCodeProjectsRunner::run(const KRunner::RunnerContext &, const KRunner::Qu
     } else if (!QStandardPaths::findExecutable(QStringLiteral("codium"))
                     .isEmpty()) {
       executable = QStringLiteral("codium");
+    } else if (!QStandardPaths::findExecutable(QStringLiteral("code-insiders"))
+                    .isEmpty()) {
+      executable = QStringLiteral("code-insiders");
     }
     QProcess::startDetached(executable, {match.data().toString()});
 }
