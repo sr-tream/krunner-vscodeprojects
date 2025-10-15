@@ -55,11 +55,35 @@ void VSCodeProjectsRunner::match(KRunner::RunnerContext &context)
 {
     const QString term = context.query();
 
+    auto matchesQuery = [](const QStringView &projectName,
+                           const QStringView &query) -> bool {
+      const auto words = query.split(' ', Qt::SkipEmptyParts);
+      if (words.isEmpty())
+        return false;
+
+      // First word must match with startsWith
+      if (!projectName.startsWith(words[0], Qt::CaseInsensitive))
+        return false;
+
+      // All remaining words must be contained in the substring after the first
+      // word
+      const QStringView remainder = projectName.mid(words[0].length());
+      for (int i = 1; i < words.size(); ++i) {
+        if (!remainder.contains(words[i], Qt::CaseInsensitive))
+          return false;
+      }
+
+      return true;
+    };
+
     if (projectNameMatches && (term.size() > 2 || context.singleRunnerQueryMode())) {
         for (const auto &project : qAsConst(projects)) {
-            if (project.name.startsWith(term, Qt::CaseInsensitive) && QFileInfo::exists(project.path)) {
-                context.addMatch(createMatch("Open " + project.name, project.path, (double)term.length() / project.name.length()));
-            }
+          if (matchesQuery(project.name, term) &&
+              QFileInfo::exists(project.path)) {
+            context.addMatch(
+                createMatch("Open " + project.name, project.path,
+                            (double)term.length() / project.name.length()));
+          }
         }
     }
     if (appNameMatches) {
@@ -68,11 +92,12 @@ void VSCodeProjectsRunner::match(KRunner::RunnerContext &context)
             return;
         const QString projectQuery = match.captured(QStringLiteral("query"));
         for (const auto &project : qAsConst(projects)) {
-            if (project.name.startsWith(projectQuery, Qt::CaseInsensitive)) {
-                if (QFileInfo::exists(project.path)) {
-                    context.addMatch(createMatch("Open " + project.name, project.path, (double)project.position / 20));
-                }
+          if (matchesQuery(project.name, projectQuery)) {
+            if (QFileInfo::exists(project.path)) {
+              context.addMatch(createMatch("Open " + project.name, project.path,
+                                           (double)project.position / 20));
             }
+          }
         }
     }
 }
